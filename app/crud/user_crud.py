@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models import User, Permission
+from models import User, Permission
 from typing import List, Optional
 
 def get_user(db: Session, user_id: str) -> Optional[User]:

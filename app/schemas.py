@@ -31,13 +31,13 @@ class PlanBase(BaseModel):
     tier_level: int = Field(..., ge=0, description="0=Free, 1=Starter, 2=Growth, etc.")
     
     # Pricing
-    base_price_aud: Optional[Decimal] = Field(None, decimal_places=2, description="Monthly base price")
+    base_price_aud: Optional[Decimal] = Field(None, description="Monthly base price")
     is_contract_pricing: bool = Field(default=False, description="Requires sales negotiation")
     
     # User Limits
     included_users: Optional[int] = Field(None, ge=0)
     max_users: Optional[int] = Field(None, ge=0, description="NULL = unlimited")
-    additional_user_price_aud: Optional[Decimal] = Field(None, decimal_places=2)
+    additional_user_price_aud: Optional[Decimal] = Field(None)
     
     # Usage Limits
     included_shipments: Optional[int] = Field(None, ge=0)
@@ -45,8 +45,8 @@ class PlanBase(BaseModel):
     included_evidence_bundles: Optional[int] = Field(None, ge=0)
     
     # Overage Pricing
-    overage_price_per_shipment_aud: Optional[Decimal] = Field(None, decimal_places=2)
-    overage_price_per_verification_aud: Optional[Decimal] = Field(None, decimal_places=2)
+    overage_price_per_shipment_aud: Optional[Decimal] = Field(None)
+    overage_price_per_verification_aud: Optional[Decimal] = Field(None)
     has_hard_cap: bool = Field(default=False, description="Block at limit or allow overages")
     
     # Feature Flags
@@ -139,9 +139,9 @@ class CompanyBase(BaseModel):
     
     # Custom Contract
     is_custom_contract: bool = Field(default=False)
-    custom_monthly_price_aud: Optional[Decimal] = Field(None, decimal_places=2)
-    custom_annual_price_aud: Optional[Decimal] = Field(None, decimal_places=2)
-    custom_setup_fee_aud: Optional[Decimal] = Field(None, decimal_places=2)
+    custom_monthly_price_aud: Optional[Decimal] = Field(None)
+    custom_annual_price_aud: Optional[Decimal] = Field(None)
+    custom_setup_fee_aud: Optional[Decimal] = Field(None)
     custom_shipments_limit: Optional[int] = Field(None, ge=0)
     custom_verifications_limit: Optional[int] = Field(None, ge=0)
     custom_users_limit: Optional[int] = Field(None, ge=0)
@@ -156,7 +156,7 @@ class CompanyBase(BaseModel):
     signed_at: Optional[datetime] = None
     
     # SLA
-    sla_uptime_guarantee: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    sla_uptime_guarantee: Optional[Decimal] = Field(None, ge=0, le=100)
     sla_support_response_hours: Optional[int] = Field(None, ge=0)
     
     # Billing
@@ -236,10 +236,10 @@ class ContractNegotiationBase(BaseModel):
     additional_notes: Optional[str] = None
     
     # Pricing Proposals
-    proposed_monthly_price_aud: Decimal = Field(..., decimal_places=2)
-    proposed_annual_price_aud: Optional[Decimal] = Field(None, decimal_places=2)
-    proposed_setup_fee_aud: Optional[Decimal] = Field(None, decimal_places=2)
-    discount_percentage: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    proposed_monthly_price_aud: Decimal = Field(...)
+    proposed_annual_price_aud: Optional[Decimal] = Field(None)
+    proposed_setup_fee_aud: Optional[Decimal] = Field(None)
+    discount_percentage: Optional[Decimal] = Field(None, ge=0, le=100)
     discount_reason: Optional[str] = Field(None, max_length=500)
     
     # Sales Info
@@ -684,7 +684,7 @@ class CompanyUsageBase(BaseModel):
     documents_created: int = Field(default=0, ge=0)
     verifications_performed: int = Field(default=0, ge=0)
     evidence_bundles_created: int = Field(default=0, ge=0)
-    storage_used_gb: Decimal = Field(default=Decimal("0.0"), ge=0, decimal_places=2)
+    storage_used_gb: Decimal = Field(default=Decimal("0.0"), ge=0)
     active_user_count: int = Field(default=0, ge=0)
     peak_user_count: int = Field(default=0, ge=0)
     
@@ -694,9 +694,9 @@ class CompanyUsageBase(BaseModel):
     user_overage: int = Field(default=0, ge=0)
     
     # Charges
-    overage_charges_aud: Decimal = Field(default=Decimal("0.0"), ge=0, decimal_places=2)
-    additional_charges_aud: Decimal = Field(default=Decimal("0.0"), ge=0, decimal_places=2)
-    total_charges_aud: Decimal = Field(default=Decimal("0.0"), ge=0, decimal_places=2)
+    overage_charges_aud: Decimal = Field(default=Decimal("0.0"), ge=0)
+    additional_charges_aud: Decimal = Field(default=Decimal("0.0"), ge=0)
+    total_charges_aud: Decimal = Field(default=Decimal("0.0"), ge=0)
     
     # Invoice
     invoice_id: Optional[str] = Field(None, max_length=100)
@@ -1053,7 +1053,7 @@ class ContractCreateFromNegotiation(BaseModel):
     contract_renewal_type: ContractRenewalType = Field(default=ContractRenewalType.MANUAL)
     
     # SLA (optional)
-    sla_uptime_guarantee: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    sla_uptime_guarantee: Optional[Decimal] = Field(None, ge=0, le=100)
     sla_support_response_hours: Optional[int] = Field(None, ge=0)
     
     # Contract document
@@ -1065,8 +1065,8 @@ class ContractCreateManual(BaseModel):
     plan_id: int
     
     # Custom pricing
-    custom_monthly_price_aud: Decimal = Field(..., gt=0, decimal_places=2)
-    custom_annual_price_aud: Optional[Decimal] = Field(None, decimal_places=2)
+    custom_monthly_price_aud: Decimal = Field(..., gt=0)
+    custom_annual_price_aud: Optional[Decimal] = Field(None)
     
     # Custom limits
     custom_shipments_limit: Optional[int] = Field(None, ge=0)

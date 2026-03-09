@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from . import models, schemas
+import models
+import schemas
 from typing import Optional, List
 
 def creat_company(db: Session, company: schemas.CompanyCreate) -> models.Company:
@@ -12,8 +13,11 @@ def creat_company(db: Session, company: schemas.CompanyCreate) -> models.Company
 def get_company(db: Session, company_id: str) -> Optional[models.Company]:
     """Get a company"""
     return db.query(models.Company).filter(models.Company.company_id == company_id).first()
+
 def get_companie(db: Session, skip: int=0, limit: int=100) -> List[models.Company]:
+    """List of companies"""
     return db.query(models.Company).offset(skip).limit(limit).all()
+
 def update_company(db: Session, company_id: str, update_data: dict) -> Optional[models.Company]:
     """Update company"""
     db_company = get_company(db, company_id)
@@ -28,3 +32,17 @@ def update_company(db: Session, company_id: str, update_data: dict) -> Optional[
     db.commit()
     db.refresh(db_company)
     return db_company
+
+def delete_company(db: Session, company_id: str) -> bool:
+    db_company = get_company(db, company_id)
+    if not db_company:
+        return False
+    db.delete(db_company)
+    db.commit()
+    return True
+
+def get_plan(db: Session, plan_id: int) -> Optional[models.Plan]:
+    return db.query(models.Plan).filter(models.Plan.plan_id == plan_id).first()
+
+def check_company(db: Session, company_id: str) -> bool:
+    return db.query(models.Company).filter(models.Company.company_id == company_id).first() is not None
