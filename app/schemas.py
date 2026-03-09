@@ -925,5 +925,254 @@ class DocumentDraftsResponse(BaseModel):
     shipment_id: str
     drafts: Dict[str, Dict[str, Any]]  
 
+# ==========================================
+# SIGNATURE LIBRARY SCHEMAS (Database Storage)
+# ==========================================
+class SignatureBase(BaseModel):
+    signature_name: str = Field(..., max_length=100, description="Display name like 'My Signature' ")
+    is_default: bool = Field(default=False, description="Use this signature by default")
+    notes: Optional[str] = Field(None, description="Optional Notes")
+
+class SignatureLibraryCreate(SignatureBase):
+    pass
+
+class SignatureLibraryUpdate(SignatureBase):
+    signature_name: Optional[str] = Field(None, max_length=100)
+    is_default: Optional[bool] = None
+    notes: Optional[str] = None
+
+class SignatureLibraryResponse(SignatureBase):
+    signature_id: int
+    user_id: str
+    comapny_id: str
+
+    file_size_bytes: int
+    mime_type:str
+
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attribute = True
+
+class SignatureDataResponse(BaseModel):
+    """Response when requesting actual signature image data"""
+    signature_id: int
+    signature_name: str
+    mime_type: str
+    signature_data_base64: str = Field(..., description="Base64 encoded image - data:image/png;base64,...")
+
+class SignatureUploadRequest(BaseModel):
+    """Metadata when uploading signature via multipart form"""
+    signature_name: str = Field(..., max_length=100)
+    is_default: bool = Field(default=False)
+    notes: Optional[str] = None
+
+class SignatureUploadResponse(BaseModel):
+    success: bool
+    signature_id: int
+    message: str
+    signature: SignatureLibraryResponse
+
+class SignatureListResponse(BaseModel):
+    """Response for listing signatures"""
+    total: int
+    signatures: List[SignatureLibraryResponse]
+    default_signature_id: Optional[int] = None
+    
+# ==========================================
+# ADMIN SCHEMAS (Simplified - MVP)
+# ==========================================
+
+# ===== ADMIN AUTHENTICATION =====
+
+class AdminRole(str, Enum):
+    SUPER_ADMIN = "super_admin"      # Full access
+    ADMIN = "admin"                   # Most functions
+    SALES = "sales"                   # Contract negotiations only
+
+class AdminUserBase(BaseModel):
+    """Internal ChainDoX staff users"""
+    email: EmailStr
+    username: str = Field(..., max_length=100)
+    first_name: str = Field(..., max_length=100)
+    last_name: str = Field(..., max_length=100)
+    admin_role: AdminRole
+    is_active: bool = Field(default=True)
+
+class AdminUserCreate(AdminUserBase):
+    password: str = Field(..., min_length=8)
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not any(char.isdigit() for char in v):
+            raise ValueError('Password must contain at least one digit')
+        if not any(char.isupper() for char in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        return v
+
+class AdminUserResponse(AdminUserBase):
+    admin_id: str
+    last_login: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AdminLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class AdminToken(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    admin_user: AdminUserResponse
+
+# ===== CONTRACT NEGOTIATION MANAGEMENT (Basic) =====
+
+class NegotiationListResponse(BaseModel):
+    """List negotiations for admin dashboard"""
+    total: int
+    pending: int
+    accepted: int
+    rejected: int
+    negotiations: List[ContractNegotiationResponse]
+
+# ===== CONTRACT CREATION =====
+
+class ContractCreateFromNegotiation(BaseModel):
+    """Create contract from accepted negotiation"""
+    negotiation_id: int
+    
+    # Contract terms
+    contract_start_date: date = Field(default_factory=date.today)
+    contract_end_date: date
+    contract_renewal_type: ContractRenewalType = Field(default=ContractRenewalType.MANUAL)
+    
+    # SLA (optional)
+    sla_uptime_guarantee: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    sla_support_response_hours: Optional[int] = Field(None, ge=0)
+    
+    # Contract document
+    contract_document_url: Optional[str] = Field(None, max_length=500, description="URL to signed contract PDF")
+
+class ContractCreateManual(BaseModel):
+    """Manually create custom contract without negotiation"""
+    company_id: str
+    plan_id: int
+    
+    # Custom pricing
+    custom_monthly_price_aud: Decimal = Field(..., gt=0, decimal_places=2)
+    custom_annual_price_aud: Optional[Decimal] = Field(None, decimal_places=2)
+    
+    # Custom limits
+    custom_shipments_limit: Optional[int] = Field(None, ge=0)
+    custom_verifications_limit: Optional[int] = Field(None, ge=0)
+    custom_users_limit: int = Field(..., ge=1)
+    
+    # Contract terms
+    contract_start_date: date
+    contract_end_date: date
+    contract_renewal_type: ContractRenewalType
+    
+    # SLA (optional)
+    sla_uptime_guarantee: Optional[Decimal] = Field(None, ge=0, le=100)
+    sla_support_response_hours: Optional[int] = Field(None, ge=0)
+    
+    # Document
+    contract_document_url: Optional[str] = None
+    signed_by: EmailStr
+
+class ContractCreateResponse(BaseModel):
+    success: bool
+    message: str
+    company: CompanyResponse
+    contract_created_at: datetime
+
+# ===== COMPANY MANAGEMENT (Basic) =====
+
+class CompanyListFilter(BaseModel):
+    """Basic filters for company list"""
+    company_type: Optional[CompanyType] = None
+    subscription_status: Optional[SubscriptionStatus] = None
+    plan_id: Optional[int] = None
+    is_custom_contract: Optional[bool] = None
+    search: Optional[str] = Field(None, description="Search by company name or email")
+    limit: int = Field(default=50, ge=1, le=200)
+    offset: int = Field(default=0, ge=0)
+
+class CompanyListResponse(BaseModel):
+    total: int
+    companies: List[CompanyResponse]
+
+class CompanySuspend(BaseModel):
+    """Suspend/unsuspend company account"""
+    reason: str = Field(..., description="Reason for suspension")
+
+# ===== BILLING OVERVIEW (Basic) =====
+
+class BillingOverview(BaseModel):
+    """Basic billing overview for admin dashboard"""
+    period_start: date
+    period_end: date
+    
+    # Revenue
+    total_revenue: Decimal
+    
+    # Customers
+    total_customers: int
+    active_customers: int
+    trial_customers: int
+    
+    # By plan
+    revenue_by_plan: Dict[str, Decimal]
+    customers_by_plan: Dict[str, int]
+
+class InvoiceListFilter(BaseModel):
+    """Filter invoices"""
+    company_id: Optional[str] = None
+    status: Optional[InvoiceStatus] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    limit: int = Field(default=50, ge=1, le=200)
+    offset: int = Field(default=0, ge=0)
+
+class InvoiceAdminResponse(BaseModel):
+    """Basic invoice details"""
+    invoice_id: str
+    company_id: str
+    company_name: str
+    
+    billing_period_start: date
+    billing_period_end: date
+    
+    # Charges
+    base_charge: Decimal
+    overage_charges: Decimal
+    total_amount: Decimal
+    
+    # Status
+    status: InvoiceStatus
+    issued_at: datetime
+    due_date: date
+
+class InvoiceListResponse(BaseModel):
+    total: int
+    total_outstanding: Decimal
+    invoices: List[InvoiceAdminResponse]
+
+# ===== ADMIN DASHBOARD =====
+
+class AdminDashboardOverview(BaseModel):
+    
+    total_customers: int
+    active_customers: int
+    total_mrr: Decimal
+    pending_negotiations: int
+    overdue_invoices: int
+    recent_signups: List[CompanyResponse]
 ShipmentResponse.model_rebuild()
 FolderResponse.model_rebuild()
