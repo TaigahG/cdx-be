@@ -3,8 +3,8 @@ import models
 import schemas
 from typing import Optional, List
 
-def creat_company(db: Session, company: schemas.CompanyCreate) -> models.Company:
-    db_company = models.Company(**company.dict())
+def create_company(db: Session, company_data: dict) -> models.Company:
+    db_company = models.Company(**company_data)
     db.add(db_company)
     db.commit()
     db.refresh(db_company)
@@ -14,7 +14,7 @@ def get_company(db: Session, company_id: str) -> Optional[models.Company]:
     """Get a company"""
     return db.query(models.Company).filter(models.Company.company_id == company_id).first()
 
-def get_companie(db: Session, skip: int=0, limit: int=100) -> List[models.Company]:
+def get_companies(db: Session, skip: int=0, limit: int=100) -> List[models.Company]:
     """List of companies"""
     return db.query(models.Company).offset(skip).limit(limit).all()
 
@@ -44,5 +44,5 @@ def delete_company(db: Session, company_id: str) -> bool:
 def get_plan(db: Session, plan_id: int) -> Optional[models.Plan]:
     return db.query(models.Plan).filter(models.Plan.plan_id == plan_id).first()
 
-def check_company(db: Session, company_id: str) -> bool:
+def company_exists(db: Session, company_id: str) -> bool:
     return db.query(models.Company).filter(models.Company.company_id == company_id).first() is not None

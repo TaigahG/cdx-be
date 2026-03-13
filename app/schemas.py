@@ -130,6 +130,7 @@ class ContractRenewalType(str, Enum):
     FIXED_TERM = "fixed_term"
 
 class CompanyBase(BaseModel):
+    company_id: str = Field(..., min_length=3, max_length=100)
     company_name: str = Field(..., max_length=255)
     company_type: CompanyType
     abn: Optional[str] = Field(None, max_length=20, description="Australian Business Number")
@@ -171,6 +172,7 @@ class CompanyBase(BaseModel):
     next_billing_date: Optional[date] = None
 
 class CompanyCreate(CompanyBase):
+    company_id: str = Field(..., min_length=3, max_length=100)
     created_by: str = Field(..., description="User ID who creates the company")
     subscription_started: datetime = Field(default_factory=datetime.utcnow)
 
@@ -479,6 +481,7 @@ class ShipmentBase(BaseModel):
     status: ShipmentStatus = Field(default=ShipmentStatus.DRAFT)
 
 class ShipmentCreate(ShipmentBase):
+    shipment_id: str
     company_id: str
     created_by_user_id: str
 
