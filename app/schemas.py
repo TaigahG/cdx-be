@@ -130,7 +130,7 @@ class ContractRenewalType(str, Enum):
     FIXED_TERM = "fixed_term"
 
 class CompanyBase(BaseModel):
-    company_id: str = Field(..., min_length=3, max_length=100)
+    company_id: Optional[str] = Field(..., min_length=3, max_length=100)
     company_name: str = Field(..., max_length=255)
     company_type: CompanyType
     abn: Optional[str] = Field(None, max_length=20, description="Australian Business Number")
@@ -550,6 +550,8 @@ class FileBase(BaseModel):
 class FileCreate(FileBase):
     company_id: str
     user_id: str
+    file_size_bytes: int = Field(..., ge=0, description="Size of the TradeTrust document in bytes")
+    status: DocumentStatus = Field(default=DocumentStatus.DRAFT, description="Initial document status")
     
     @validator('document_data')
     def validate_tradetrust_structure(cls, v):
@@ -947,7 +949,7 @@ class SignatureLibraryUpdate(SignatureBase):
 class SignatureLibraryResponse(SignatureBase):
     signature_id: int
     user_id: str
-    comapny_id: str
+    company_id: str
 
     file_size_bytes: int
     mime_type:str
@@ -956,7 +958,7 @@ class SignatureLibraryResponse(SignatureBase):
     updated_at: str
 
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 class SignatureDataResponse(BaseModel):
     """Response when requesting actual signature image data"""

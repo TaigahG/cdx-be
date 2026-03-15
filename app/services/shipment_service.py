@@ -4,6 +4,7 @@ from schemas import ShipmentCreate, ShipmentUpdate
 from typing import List, Optional
 from models import Shipment
 from datetime import datetime
+from utils import generate_shipment_id
 
 class ShipmentService:
     """Business logic for shipments"""
@@ -26,22 +27,28 @@ class ShipmentService:
     
     @staticmethod
     def create_shipment(db: Session, shipment: ShipmentCreate) -> Shipment:
-        """Create shipment with validation"""
+        """Create shipment with validation and auto-generated ID"""
         
-        # Validate company exists
         if not company_crud.company_exists(db, shipment.company_id):
             raise ValueError(f"Company with ID {shipment.company_id} not found")
         
-        # Validate user exists
         if not user_crud.get_user(db, shipment.created_by_user_id):
             raise ValueError(f"User with ID {shipment.created_by_user_id} not found")
         
-        # Check if shipment_id already exists
-        if shipment_crud.shipment_exists(db, shipment.shipment_id):
-            raise ValueError(f"Shipment with ID {shipment.shipment_id} already exists")
+        company = company_crud.get_company(db, shipment.company_id)
+        
+        shipment_id = generate_shipment_id(
+            company_name=company.company_name,
+            shipment_name=shipment.shipment_name,
+            db=db
+        )
+        
+        # Prepare data with generated ID
+        shipment_data = shipment.model_dump()
+        shipment_data['shipment_id'] = shipment_id
         
         # Create shipment
-        return shipment_crud.create_shipment(db, shipment.model_dump())
+        return shipment_crud.create_shipment(db, shipment_data)
     
     @staticmethod
     def update_shipment(db: Session, shipment_id: str, shipment_update: ShipmentUpdate) -> Optional[Shipment]:

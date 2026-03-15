@@ -4,7 +4,7 @@ from schemas import UserCreate, UserUpdate
 from typing import List, Optional
 from models import User
 from passlib.context import CryptContext
-
+from utils import generate_user_id
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserService:
@@ -44,6 +44,7 @@ class UserService:
         # Hash password
         user_data = user.model_dump()
         user_data['password_hash'] = UserService.hash_password(user_data.pop('password'))
+        user_data['id'] = generate_user_id(user_data['email'], db)
         
         # Create user
         return user_crud.create_user(db, user_data)

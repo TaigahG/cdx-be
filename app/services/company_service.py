@@ -3,6 +3,7 @@ from crud import company_crud, user_crud
 from schemas import CompanyCreate, CompanyUpdate
 from typing import List, Optional
 from models import Company
+from utils import generate_company_id
 
 class CompanyService:
     """Business logic for companies"""
@@ -19,16 +20,17 @@ class CompanyService:
     
     @staticmethod
     def create_company(db: Session, company: CompanyCreate) -> Company:
-        """Create company with validation"""
         
         if not company_crud.get_plan(db, company.plan_id):
             raise ValueError(f"Plan with ID {company.plan_id} not found")
         
-        if company_crud.company_exists(db, company.company_id):
-            raise ValueError(f"Company with ID {company.company_id} already exists")
+        company_id = generate_company_id(company.company_name, db)
+        
+        company_data = company.model_dump()
+        company_data['company_id'] = company_id
         
         # Create company
-        return company_crud.create_company(db, company.model_dump())
+        return company_crud.create_company(db, company_data)
     
     @staticmethod
     def update_company(db: Session, company_id: str, company_update: CompanyUpdate) -> Optional[Company]:

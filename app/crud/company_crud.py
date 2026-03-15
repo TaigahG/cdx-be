@@ -4,6 +4,9 @@ import schemas
 from typing import Optional, List
 
 def create_company(db: Session, company_data: dict) -> models.Company:
+
+    if 'company_id' not in company_data:
+        return ValueError("CompanyID is needed")
     db_company = models.Company(**company_data)
     db.add(db_company)
     db.commit()
