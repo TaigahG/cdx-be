@@ -51,10 +51,12 @@ class Plan(Base):
     included_shipments = Column(Integer)
     included_verifications = Column(Integer)
     included_evidence_bundles = Column(Integer)
+    included_transfers = Column(Integer)
     
     # Overage Pricing
     overage_price_per_shipment_aud = Column(Numeric(10, 2))
     overage_price_per_verification_aud = Column(Numeric(10, 2))
+    max_overage_packages = Column(Integer)
     has_hard_cap = Column(Boolean, default=False, nullable=False)
     
     # Feature Flags
@@ -66,7 +68,9 @@ class Plan(Base):
     has_sla = Column(Boolean, default=False, nullable=False)
     has_multi_party_transfer = Column(Boolean, default=False, nullable=False)
     has_advanced_controls = Column(Boolean, default=False, nullable=False)
-    
+    issuance_price_aud = Column(Numeric(10, 2))
+    value_cap_aud = Column(Numeric(10,2))
+
     # Metadata
     is_active = Column(Boolean, default=True, nullable=False)
     is_featured = Column(Boolean, default=False, nullable=False)
@@ -153,6 +157,8 @@ class Company(Base):
     address_book = relationship("AddressBook", back_populates="company")
     contract_negotiations = relationship("ContractNegotiation", back_populates="company")
     logs = relationship("Log", back_populates="company")
+    credits = relationship("CompanyCredits", back_populates="company")
+    credit_transactions = relationship("CreditTransaction", back_populates="company")
     # creator = relationship("User", foreign_keys=[created_by])
     
     # Indexes
@@ -252,12 +258,12 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(String(100), primary_key=True)
-    company_id = Column(String(100), ForeignKey("company.company_id"), nullable=False)
+    company_id = Column(String(100), ForeignKey("company.company_id"), nullable=True)
     
     # Authentication
     email = Column(String(255), unique=True, nullable=False)
     username = Column(String(100), nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)
     email_verified = Column(Boolean, default=False, nullable=False)
     email_verified_at = Column(DateTime)
     
@@ -268,7 +274,7 @@ class User(Base):
     wallet_address = Column(String(255))  # Blockchain wallet address
     
     # Role & Permissions
-    role = Column(String(50), ForeignKey("permissions.role"), nullable=False)
+    role = Column(String(50), ForeignKey("permissions.role"), nullable=True)
     is_owner = Column(Boolean, default=False, nullable=False)
     
     # Invitation
@@ -295,6 +301,7 @@ class User(Base):
     verifications = relationship("DocumentVerification", back_populates="verified_by_user")
     address_book_entries = relationship("AddressBook", back_populates="created_by_user")
     logs = relationship("Log", back_populates="user")
+    credit_transactions = relationship("CreditTransaction", back_populates="user")
     
     # Indexes
     __table_args__ = (
@@ -564,6 +571,7 @@ class CompanyUsage(Base):
     documents_created = Column(Integer, default=0, nullable=False)
     verifications_performed = Column(Integer, default=0, nullable=False)
     evidence_bundles_created = Column(Integer, default=0, nullable=False)
+    transfers_performed = Column(Integer, default=0, nullable=False)
     storage_used_gb = Column(Numeric(10, 2), default=0.0, nullable=False)
     active_user_count = Column(Integer, default=0, nullable=False)
     peak_user_count = Column(Integer, default=0, nullable=False)
@@ -572,6 +580,7 @@ class CompanyUsage(Base):
     shipment_overage = Column(Integer, default=0, nullable=False)
     verification_overage = Column(Integer, default=0, nullable=False)
     user_overage = Column(Integer, default=0, nullable=False)
+    transfer_overage = Column(Integer, default=0, nullable=False)
     
     # Charges
     overage_charges_aud = Column(Numeric(10, 2), default=0.0, nullable=False)
@@ -594,6 +603,64 @@ class CompanyUsage(Base):
         Index('idx_usage_period', 'billing_period_start', 'billing_period_end'),
     )
 
+class CompanyCredits(Base):
+    __tablename__ = "company_credits"
+    
+    credit_id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(String(100), ForeignKey("company.company_id"), nullable=False)
+    
+    # Billing Period
+    billing_period_start = Column(Date, nullable=False)
+    billing_period_end = Column(Date, nullable=False)
+    
+    # Package Credits (the only purchasable overage)
+    package_credits_remaining = Column(Integer, default=0, nullable=False)
+    package_credits_purchased = Column(Integer, default=0, nullable=False)  # Compared against plan.max_overage_packages
+    
+    # Total spent on credits this period
+    total_credit_spend_aud = Column(Numeric(10, 2), default=0.0, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    company = relationship("Company", back_populates="credits")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_credits_company', 'company_id', 'billing_period_end'),
+    )
+ 
+ 
+class CreditTransaction(Base):
+    __tablename__ = "credit_transactions"
+    
+    transaction_id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(String(100), ForeignKey("company.company_id"), nullable=False)
+    user_id = Column(String(100), ForeignKey("users.id"), nullable=False)
+    
+    # What was purchased
+    credit_type = Column(String(50), nullable=False) 
+    quantity = Column(Integer, nullable=False) 
+    price_per_credit_aud = Column(Numeric(10, 2), nullable=False) 
+    total_price_aud = Column(Numeric(10, 2), nullable=False) 
+    
+    # Payment
+    stripe_payment_intent_id = Column(String(255))  
+    payment_status = Column(String(50), nullable=False) 
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    company = relationship("Company", back_populates="credit_transactions")
+    user = relationship("User", back_populates="credit_transactions")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_credit_tx_company', 'company_id', 'created_at'),
+        Index('idx_credit_tx_payment', 'stripe_payment_intent_id'),
+    )
 
 # 8. SUPPORTING TABLES
 class AddressBook(Base):

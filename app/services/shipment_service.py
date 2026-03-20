@@ -1,3 +1,5 @@
+# services/shipment_service.py
+
 from sqlalchemy.orm import Session
 from crud import shipment_crud, company_crud, user_crud
 from schemas import ShipmentCreate, ShipmentUpdate
@@ -5,6 +7,8 @@ from typing import List, Optional
 from models import Shipment
 from datetime import datetime
 from utils import generate_shipment_id
+from services.plan_service import PlanEnforcementService
+
 
 class ShipmentService:
     """Business logic for shipments"""
@@ -27,13 +31,17 @@ class ShipmentService:
     
     @staticmethod
     def create_shipment(db: Session, shipment: ShipmentCreate) -> Shipment:
-        """Create shipment with validation and auto-generated ID"""
         
         if not company_crud.company_exists(db, shipment.company_id):
             raise ValueError(f"Company with ID {shipment.company_id} not found")
         
         if not user_crud.get_user(db, shipment.created_by_user_id):
             raise ValueError(f"User with ID {shipment.created_by_user_id} not found")
+        
+        check = PlanEnforcementService.check_can_create_shipment(db, shipment.company_id)
+        
+        if not check["allowed"]:
+            raise ValueError(check["message"])
         
         company = company_crud.get_company(db, shipment.company_id)
         
@@ -43,22 +51,22 @@ class ShipmentService:
             db=db
         )
         
-        # Prepare data with generated ID
         shipment_data = shipment.model_dump()
         shipment_data['shipment_id'] = shipment_id
         
-        # Create shipment
-        return shipment_crud.create_shipment(db, shipment_data)
+        new_shipment = shipment_crud.create_shipment(db, shipment_data)
+        
+        PlanEnforcementService.use_shipment(db, shipment.company_id)
+        
+        return new_shipment
     
     @staticmethod
     def update_shipment(db: Session, shipment_id: str, shipment_update: ShipmentUpdate) -> Optional[Shipment]:
         """Update shipment with validation"""
         
-        # Check shipment exists
         if not shipment_crud.shipment_exists(db, shipment_id):
             raise ValueError(f"Shipment with ID {shipment_id} not found")
         
-        # Update shipment
         update_data = shipment_update.model_dump(exclude_unset=True)
         return shipment_crud.update_shipment(db, shipment_id, update_data)
     

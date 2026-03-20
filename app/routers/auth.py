@@ -271,14 +271,13 @@ def dev_login(
     """
 
 
-    # Block in production
     if os.getenv("ENVIRONMENT") == "production":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     
-    user_id = f"dev_{email.split('@')[0]}"
     
-    # Find or create dev user
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.email == email).first()
+    user_id = user.id if user else f"dev_{email.split('@')[0]}"
+
     
     if not user:
         user = User(

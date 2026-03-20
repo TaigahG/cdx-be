@@ -31,33 +31,13 @@ def create_company(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Create a new company. The authenticated user becomes the owner.
-    
-    Flow:
-    1. Validate the company data
-    2. Create the company (created_by = current user)
-    3. Assign the user as owner of this company
-    """
     try:
-        # Check user doesn't already belong to a company
         if current_user.company_id is not None:
             raise ValueError("You already belong to a company")
         
-        # Override created_by with the authenticated user's ID
-        company_data = company.model_dump()
-        company_data["created_by"] = current_user.id
+        new_company = CompanyService.create_company(db, company)
         
-        # Create the company using the overridden data
-        from crud import company_crud
-        
-        if not company_crud.get_plan(db, company.plan_id):
-            raise ValueError(f"Plan with ID {company.plan_id} not found")
-        
-        if company_crud.company_exists(db, company.company_id):
-            raise ValueError(f"Company with ID {company.company_id} already exists")
-        
-        new_company = company_crud.create_company(db, company_data)
+        new_company.created_by = current_user.id
         
         # Assign user as owner of this company
         current_user.company_id = new_company.company_id

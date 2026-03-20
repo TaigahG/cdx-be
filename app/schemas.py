@@ -43,10 +43,12 @@ class PlanBase(BaseModel):
     included_shipments: Optional[int] = Field(None, ge=0)
     included_verifications: Optional[int] = Field(None, ge=0)
     included_evidence_bundles: Optional[int] = Field(None, ge=0)
+    included_transfers: Optional[int] = Field(None, ge=0, description="Transfers per period. NULL = unlimited")
     
     # Overage Pricing
     overage_price_per_shipment_aud: Optional[Decimal] = Field(None)
     overage_price_per_verification_aud: Optional[Decimal] = Field(None)
+    max_overage_packages: Optional[int] = Field(None, ge=0, description="Max purchasable overage packages. NULL = unlimited, 0 = none")
     has_hard_cap: bool = Field(default=False, description="Block at limit or allow overages")
     
     # Feature Flags
@@ -58,6 +60,9 @@ class PlanBase(BaseModel):
     has_sla: bool = Field(default=False)
     has_multi_party_transfer: bool = Field(default=False)
     has_advanced_controls: bool = Field(default=False)
+    issuance_price_aud: Optional[Decimal] = Field(None, description="Per-issuance cost for carriers")
+    surrender_price_aud: Optional[Decimal] = Field(None, description="Per-surrender cost for carriers")
+    value_cap_aud: Optional[Decimal] = Field(None, description="Max document value per package. NULL = no cap")
     
     # Metadata
     is_active: bool = Field(default=True)
@@ -94,6 +99,11 @@ class PlanUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_featured: Optional[bool] = None
     sort_order: Optional[int] = None
+    included_transfers: Optional[int] = None
+    max_overage_packages: Optional[int] = None
+    issuance_price_aud: Optional[Decimal] = None
+    surrender_price_aud: Optional[Decimal] = None
+    value_cap_aud: Optional[Decimal] = None
 
 class PlanResponse(PlanBase):
     plan_id: int
@@ -130,7 +140,7 @@ class ContractRenewalType(str, Enum):
     FIXED_TERM = "fixed_term"
 
 class CompanyBase(BaseModel):
-    company_id: Optional[str] = Field(..., min_length=3, max_length=100)
+    # company_id: Optional[str] = Field(..., min_length=3, max_length=100)
     company_name: str = Field(..., max_length=255)
     company_type: CompanyType
     abn: Optional[str] = Field(None, max_length=20, description="Australian Business Number")
@@ -172,8 +182,8 @@ class CompanyBase(BaseModel):
     next_billing_date: Optional[date] = None
 
 class CompanyCreate(CompanyBase):
-    company_id: str = Field(..., min_length=3, max_length=100)
-    created_by: str = Field(..., description="User ID who creates the company")
+    # company_id: str = Field(..., min_length=3, max_length=100)
+    created_by: Optional[str] = Field(None, description="User ID who creates the company")
     subscription_started: datetime = Field(default_factory=datetime.utcnow)
 
 class CompanyUpdate(BaseModel):
@@ -481,7 +491,7 @@ class ShipmentBase(BaseModel):
     status: ShipmentStatus = Field(default=ShipmentStatus.DRAFT)
 
 class ShipmentCreate(ShipmentBase):
-    shipment_id: str
+    # shipment_id: str
     company_id: str
     created_by_user_id: str
 
@@ -514,8 +524,8 @@ class FolderBase(BaseModel):
     color: Optional[str] = Field(None, max_length=20, description="UI color tag")
 
 class FolderCreate(FolderBase):
-    user_id: str
-    company_id: str
+    user_id: Optional[str] = None
+    company_id: Optional[str] = None
 
 class FolderUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
@@ -689,6 +699,7 @@ class CompanyUsageBase(BaseModel):
     documents_created: int = Field(default=0, ge=0)
     verifications_performed: int = Field(default=0, ge=0)
     evidence_bundles_created: int = Field(default=0, ge=0)
+    transfers_performed: Optional[int] = None
     storage_used_gb: Decimal = Field(default=Decimal("0.0"), ge=0)
     active_user_count: int = Field(default=0, ge=0)
     peak_user_count: int = Field(default=0, ge=0)
@@ -697,6 +708,8 @@ class CompanyUsageBase(BaseModel):
     shipment_overage: int = Field(default=0, ge=0)
     verification_overage: int = Field(default=0, ge=0)
     user_overage: int = Field(default=0, ge=0)
+    transfer_overage: Optional[int] = None
+
     
     # Charges
     overage_charges_aud: Decimal = Field(default=Decimal("0.0"), ge=0)
@@ -726,6 +739,8 @@ class CompanyUsageUpdate(BaseModel):
     total_charges_aud: Optional[Decimal] = None
     invoice_id: Optional[str] = None
     invoice_status: Optional[InvoiceStatus] = None
+    transfers_performed: Optional[int] = None
+    transfer_overage: Optional[int] = None
 
 class CompanyUsageResponse(CompanyUsageBase):
     usage_id: int
@@ -758,6 +773,10 @@ class UsageSummary(BaseModel):
     verifications_limit: Optional[int]
     verifications_remaining: Optional[int]
     verifications_overage: int
+    
+    transfers_used: int
+    transfers_limit: Optional[int]
+    transfers_remaining: Optional[int]
     
     # Charges
     base_charge_aud: Decimal
@@ -1117,6 +1136,81 @@ class CompanySuspend(BaseModel):
     """Suspend/unsuspend company account"""
     reason: str = Field(..., description="Reason for suspension")
 
+
+# ===== COMPANY CREDITS =====
+ 
+class CompanyCreditsBase(BaseModel):
+    billing_period_start: date
+    billing_period_end: date
+    package_credits_remaining: int = Field(default=0, ge=0)
+    package_credits_purchased: int = Field(default=0, ge=0)
+    total_credit_spend_aud: Decimal = Field(default=Decimal("0.0"), ge=0)
+ 
+class CompanyCreditsCreate(CompanyCreditsBase):
+    company_id: str
+ 
+class CompanyCreditsResponse(CompanyCreditsBase):
+    credit_id: int
+    company_id: str
+    created_at: datetime
+    updated_at: datetime
+ 
+    class Config:
+        from_attributes = True
+ 
+ 
+# ===== CREDIT TRANSACTIONS =====
+ 
+class CreditPurchaseRequest(BaseModel):
+    """Request to buy package credits"""
+    quantity: int = Field(..., ge=1, le=10, description="Number of credits to buy")
+ 
+class CreditTransactionResponse(BaseModel):
+    transaction_id: int
+    company_id: str
+    user_id: str
+    credit_type: str
+    quantity: int
+    price_per_credit_aud: Decimal
+    total_price_aud: Decimal
+    payment_status: str
+    created_at: datetime
+ 
+    class Config:
+        from_attributes = True
+ 
+ 
+# ===== CREDIT BALANCE =====
+ 
+class CreditBalanceResponse(BaseModel):
+    """Current credit status for a company"""
+    company_id: str
+    plan_name: str
+    billing_period_start: date
+    billing_period_end: date
+    
+    # Package usage
+    packages_included: Optional[int]
+    packages_used: int
+    packages_remaining_free: int
+    
+    # Package credits (overage)
+    package_credits_remaining: int
+    package_credits_purchased: int
+    max_purchasable: Optional[int]  # From plan.max_overage_packages
+    can_buy_more: bool
+    price_per_credit_aud: Optional[Decimal]
+    
+    # Transfers
+    transfers_included: Optional[int]
+    transfers_used: int
+    transfers_remaining: Optional[int]
+    
+    # Verifications
+    verifications_included: Optional[int]
+    verifications_used: int
+    verifications_remaining: Optional[int]
+
 # ===== BILLING OVERVIEW (Basic) =====
 
 class BillingOverview(BaseModel):
@@ -1181,3 +1275,4 @@ class AdminDashboardOverview(BaseModel):
     recent_signups: List[CompanyResponse]
 ShipmentResponse.model_rebuild()
 FolderResponse.model_rebuild()
+
