@@ -1,6 +1,6 @@
 # routers/companies.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[CompanyResponse])
-def list_companies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_companies(skip: int = Query(default=0, ge=0), limit: int = Query(default=100, ge=1, le=200), db: Session = Depends(get_db)):
     return CompanyService.list_companies(db, skip, limit)
 
 

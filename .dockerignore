@@ -1,0 +1,15 @@
+.env
+.env.*
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.vscode
+*.md
+*.txt
+!requirements.txt
+create_database.py
+venv/
+.venv/
+node_modules/

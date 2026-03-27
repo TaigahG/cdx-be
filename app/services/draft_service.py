@@ -83,13 +83,21 @@ class DraftService:
         pattern = DraftService._build_prefix(company_id, user_id, shipment_id)
         
         drafts = {}
-        for key in r.scan_iter(match=pattern):
-            data = r.get(key)
-            if data:
-                draft = json.loads(data)
-                doc_type = draft.get("document_type", "unknown")
-                draft["expires_in"] = r.ttl(key)
-                drafts[doc_type] = draft
+        keys = list(r.scan_iter(match=pattern))
+        if keys:
+            pipe = r.pipeline()
+            for key in keys:
+                pipe.get(key)
+                pipe.ttl(key)
+            results = pipe.execute()
+            for i, key in enumerate(keys):
+                data = results[i * 2]
+                ttl = results[i * 2 + 1]
+                if data:
+                    draft = json.loads(data)
+                    doc_type = draft.get("document_type", "unknown")
+                    draft["expires_in"] = ttl
+                    drafts[doc_type] = draft
         
         return {
             "shipment_id": shipment_id,
@@ -125,9 +133,7 @@ class DraftService:
         r = get_redis()
         pattern = DraftService._build_prefix(company_id, user_id, shipment_id)
         
-        deleted = 0
-        for key in r.scan_iter(match=pattern):
-            r.delete(key)
-            deleted += 1
-        
-        return deleted
+        keys = list(r.scan_iter(match=pattern))
+        if keys:
+            r.delete(*keys)
+        return len(keys)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
@@ -14,8 +14,8 @@ def list_documents(
     folder_id: int = None,
     document_type: str = None,
     is_verified: bool = None,
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=200),
     db: Session = Depends(get_db)
 ):
     """List all documents with optional filters"""

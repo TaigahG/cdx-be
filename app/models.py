@@ -75,6 +75,11 @@ class Plan(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     is_featured = Column(Boolean, default=False, nullable=False)
     sort_order = Column(Integer, default=0)
+
+    #Stripe Integration
+    stripe_price_id_monthly = Column(String(100))
+    stripe_price_id_anually = Column(String(100))
+
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -134,6 +139,7 @@ class Company(Base):
     billing_address = Column(Text)
     payment_method = Column(String(50), nullable=False)  # 'credit_card', 'invoice', 'bank_transfer'
     stripe_customer_id = Column(String(100))
+    stripe_subscription_id = Column(String(100))
     
     # Subscription Status
     subscription_status = Column(String(20), nullable=False)  # 'trial', 'active', 'past_due', 'cancelled', 'expired'
