@@ -7,6 +7,23 @@ from services import FileService
 
 router = APIRouter()
 
+@router.get("/analytics")
+def get_document_analytics(db: Session = Depends(get_db)):
+    """Get document counter analytics for admin dashboard"""
+    return FileService.get_analytics(db)
+
+@router.post("/counter/verified", status_code=status.HTTP_200_OK)
+def increment_verified(document_type: str = Query(...), db: Session = Depends(get_db)):
+    """Increment verified counter for a document type (called by external verify service)"""
+    FileService.increment_verified(db, document_type)
+    return {"message": f"Verified counter incremented for {document_type}"}
+
+@router.post("/counter/transferred", status_code=status.HTTP_200_OK)
+def increment_transferred(document_type: str = Query(...), db: Session = Depends(get_db)):
+    """Increment transferred counter for a document type (called by external transfer service)"""
+    FileService.increment_transferred(db, document_type)
+    return {"message": f"Transferred counter incremented for {document_type}"}
+
 @router.get("/", response_model=List[FileResponse])
 def list_documents(
     company_id: str = None,

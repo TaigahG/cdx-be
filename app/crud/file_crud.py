@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from models import File, DocumentVerification
+from sqlalchemy import update, func
+from models import File, DocumentVerification, DocCounter
 from typing import List, Optional
 
 def get_file(db: Session, file_id: int) -> Optional[File]:
@@ -32,10 +33,19 @@ def get_files(
     
     return query.order_by(File.created_at.desc()).offset(skip).limit(limit).all()
 
-def create_file(db: Session, file_data: dict) -> File:
+def create_file(db: Session, file_data: dict, document_type: str = None) -> File:
     """Create a new file"""
     db_file = File(**file_data)
     db.add(db_file)
+    if document_type:
+
+        counter = db.query(DocCounter).filter(DocCounter.document_type == document_type).first()
+        
+        if not counter:
+            db.add(DocCounter(document_type=document_type, total_doc_created = 1, total_doc_verified = 0, total_doc_transferred=0))
+        else:
+            stmt = update(DocCounter).where(DocCounter.document_type == document_type).values(total_doc_created = DocCounter.total_doc_created+1)
+            db.execute(stmt)
     db.commit()
     db.refresh(db_file)
     return db_file
@@ -71,16 +81,36 @@ def get_file_verifications(db: Session, file_id: int) -> List[DocumentVerificati
         DocumentVerification.file_id == file_id
     ).order_by(DocumentVerification.verified_at.desc()).all()
 
-def increment_verification_count(db: Session, file_id: int) -> Optional[File]:
-    """Increment file verification count"""
-    db_file = get_file(db, file_id)
-    if not db_file:
-        return None
-    
-    db_file.verification_count += 1
-    from datetime import datetime
-    db_file.verified_at = datetime.utcnow()
-    db_file.is_verified = True
+
+def increment_doc_counter(db: Session, document_type: str, field: str):
+    """Increment a specific counter field for a document type.
+    field must be one of: total_doc_created, total_doc_verified, total_doc_transferred
+    """
+    counter = db.query(DocCounter).filter(DocCounter.document_type == document_type).first()
+    if not counter:
+        initial = {"document_type": document_type, "total_doc_created": 0, "total_doc_verified": 0, "total_doc_transferred": 0}
+        initial[field] = 1
+        db.add(DocCounter(**initial))
+    else:
+        stmt = update(DocCounter).where(
+            DocCounter.document_type == document_type
+        ).values({field: getattr(DocCounter, field) + 1})
+        db.execute(stmt)
     db.commit()
-    db.refresh(db_file)
-    return db_file
+
+def get_doc_counters(db: Session) -> List[DocCounter]:
+    """Get all document counters"""
+    return db.query(DocCounter).all()
+
+def get_doc_counter_totals(db: Session) -> dict:
+    """Get summed totals across all document types"""
+    result = db.query(
+        func.sum(DocCounter.total_doc_created),
+        func.sum(DocCounter.total_doc_verified),
+        func.sum(DocCounter.total_doc_transferred)
+    ).first()
+    return {
+        "total_doc_created": result[0] or 0,
+        "total_doc_verified": result[1] or 0,
+        "total_doc_transferred": result[2] or 0
+    }

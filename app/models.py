@@ -7,7 +7,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from database import Base
+from app.database import Base
 from datetime import datetime
 
 
@@ -350,6 +350,13 @@ class AdminUser(Base):
         Index('idx_admin_role', 'admin_role'),
     )
 
+class DocCounter(Base):
+    __tablename__ = "document_counter"
+
+    document_type = Column(String(100), primary_key=True)                                                                                       
+    total_doc_created = Column(Integer, default=0, nullable=False)
+    total_doc_verified = Column(Integer, default=0, nullable=False)                                                                             
+    total_doc_transferred = Column(Integer, default=0, nullable=False)
 
 # 5. SHIPMENTS & DOCUMENTS MODELS
 class Shipment(Base):
@@ -459,7 +466,6 @@ class File(Base):
     status = Column(String(50), nullable=False)  # 'draft', 'issued', 'transferred', 'revoked'
     
     # Analytics
-    verification_count = Column(Integer, default=0, nullable=False)
     view_count = Column(Integer, default=0, nullable=False)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

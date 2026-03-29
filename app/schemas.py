@@ -617,7 +617,6 @@ class FileResponse(FileBase):
     status: DocumentStatus
     
     # Analytics
-    verification_count: int
     view_count: int
     
     # Timestamps

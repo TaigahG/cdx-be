@@ -52,7 +52,7 @@ class FileService:
             if not folder:
                 raise ValueError(f"Folder with ID {file.folder_id} not found")
         
-        return file_crud.create_file(db, file.model_dump())
+        return file_crud.create_file(db, file.model_dump(), document_type=file.document_type)
     
     @staticmethod
     def update_file(db: Session, file_id: int, file_update: FileUpdate) -> Optional[File]:
@@ -89,8 +89,9 @@ class FileService:
         if not file_crud.get_file(db, file_id):
             raise ValueError(f"File with ID {file_id} not found")
         
+        from datetime import datetime
         if is_verified:
-            return file_crud.increment_verification_count(db, file_id)
+            return file_crud.update_file(db, file_id, {'is_verified': True, 'verified_at': datetime.utcnow()})
         else:
             return file_crud.update_file(db, file_id, {'is_verified': False})
     
@@ -108,6 +109,32 @@ class FileService:
             "file_id": file_id,
             "is_verified": db_file.is_verified,
             "verified_at": db_file.verified_at,
-            "verification_count": db_file.verification_count,
             "verification_history": verifications
+        }
+
+    @staticmethod
+    def increment_verified(db: Session, document_type: str):
+        """Increment verified counter for a document type"""
+        file_crud.increment_doc_counter(db, document_type, "total_doc_verified")
+
+    @staticmethod
+    def increment_transferred(db: Session, document_type: str):
+        """Increment transferred counter for a document type"""
+        file_crud.increment_doc_counter(db, document_type, "total_doc_transferred")
+
+    @staticmethod
+    def get_analytics(db: Session):
+        """Get document analytics for admin dashboard"""
+        counters = file_crud.get_doc_counters(db)
+        totals = file_crud.get_doc_counter_totals(db)
+        return {
+            "by_document_type": [
+                {
+                    "document_type": c.document_type,
+                    "total_doc_created": c.total_doc_created,
+                    "total_doc_verified": c.total_doc_verified,
+                    "total_doc_transferred": c.total_doc_transferred
+                } for c in counters
+            ],
+            "totals": totals
         }
