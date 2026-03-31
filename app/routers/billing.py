@@ -104,6 +104,7 @@ def create_subscription_checkout(
             stripe_customer_id=company.stripe_customer_id,
             stripe_price_id=stripe_price_id,
             company_id=company.company_id,
+            plan_id=req.plan_id,
         )
         return result
     except Exception as e:

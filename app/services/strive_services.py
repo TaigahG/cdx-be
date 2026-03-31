@@ -61,6 +61,7 @@ class StripeService:
         stripe_customer_id:str,
         stripe_price_id:str,
         company_id:str,
+        plan_id:int = None,
         success_url:str = None,
         cancel_url:str = None,
     ) -> dict:
@@ -74,7 +75,8 @@ class StripeService:
             }],
             metadata={
                 "chaindox_company_id":company_id,
-                "type":"subscription"
+                "type":"subscription",
+                "plan_id": str(plan_id) if plan_id else "",
             },
 
             success_url=success_url or f"{FRONTEND_URL}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",

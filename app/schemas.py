@@ -145,8 +145,8 @@ class CompanyBase(BaseModel):
     company_type: CompanyType
     abn: Optional[str] = Field(None, max_length=20, description="Australian Business Number")
     industry: Optional[str] = Field(None, max_length=100)
-    
-    plan_id: int
+
+    plan_id: int = Field(default=1)
     
     # Custom Contract
     is_custom_contract: bool = Field(default=False)
@@ -173,7 +173,7 @@ class CompanyBase(BaseModel):
     # Billing
     billing_email: EmailStr
     billing_address: Optional[str] = None
-    payment_method: PaymentMethod
+    payment_method: PaymentMethod = Field(default=PaymentMethod.CREDIT_CARD)
     stripe_customer_id: Optional[str] = Field(None, max_length=100)
     
     # Subscription

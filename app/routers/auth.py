@@ -21,8 +21,8 @@ router = APIRouter()
 
 # Cookie settings
 IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
-COOKIE_SECURE = IS_PRODUCTION          # True in prod (HTTPS), False in dev
-COOKIE_SAMESITE = "lax"
+COOKIE_SECURE = True                   
+COOKIE_SAMESITE = "none"
 ACCESS_MAX_AGE = ACCESS_TOKEN_EXPIRE_MINUTES * 60          # 15 min in seconds
 REFRESH_MAX_AGE = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60  # 7 days in seconds
 

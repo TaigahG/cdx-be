@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from database import engine, Base
 from redis_client import get_redis, close_redis
-from routers import companies, users, shipments, documents, auth, credits, drafts, folders, billing, stripe_webhook
+from routers import companies, users, shipments, documents, auth, credits, drafts, folders, billing, stripe_webhook, plans
 import os
 
 
@@ -51,6 +51,7 @@ app.include_router(drafts.router, prefix="/api/drafts", tags=["Drafts"])
 app.include_router(folders.router, prefix="/api/folders", tags=["Folders"])
 app.include_router(billing.router, prefix="/api/billing", tags=["Billing"])
 app.include_router(stripe_webhook.router, prefix="/api/stripe", tags=["Stripe"])
+app.include_router(plans.router, prefix="/api/plans", tags=["Plans"])
 
 
 @app.get("/health")

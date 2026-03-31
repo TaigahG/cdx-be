@@ -87,15 +87,20 @@ def _handle_checkout_completed(db:Session, session: dict):
 
 def _activate_subscription(db:Session, company: Company, session: dict):
     subs_id = session.get("subscription")
-    
+    metadata = session.get("metadata", {})
+    plan_id = metadata.get("plan_id")
+
     if subs_id:
         company.stripe_subscription_id = subs_id
-    
+
+    if plan_id:
+        company.plan_id = int(plan_id)
+
     company.subscription_status = "active"
     company.updated_at = datetime.utcnow()
 
     db.commit()
-    logger.info(f"Subscription activated for {company.company_id} | Stripe sub: {subs_id}")
+    logger.info(f"Subscription activated for {company.company_id} | Stripe sub: {subs_id} | Plan: {plan_id}")
 
 def _add_credits(db:Session, company:Company, session:dict, metadata:dict):
     user_id = metadata.get("chaindox_user_id")

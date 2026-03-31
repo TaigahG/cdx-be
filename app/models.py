@@ -7,7 +7,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.database import Base
+from database import Base
 from datetime import datetime
 
 
@@ -69,6 +69,7 @@ class Plan(Base):
     has_multi_party_transfer = Column(Boolean, default=False, nullable=False)
     has_advanced_controls = Column(Boolean, default=False, nullable=False)
     issuance_price_aud = Column(Numeric(10, 2))
+    surrender_price_aud = Column(Numeric(10, 2))
     value_cap_aud = Column(Numeric(10,2))
 
     # Metadata

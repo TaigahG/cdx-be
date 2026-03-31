@@ -17,13 +17,13 @@ connect_args = {}
 if os.getenv("ENVIRONMENT") == "production":
     connect_args = {
         "sslmode": "verify-full",
-        "sslrootcert": "certs/global-bundle.pem"
+        "sslrootcert": "/project/certs/global-bundle.pem"
     }
 else:
     connect_args = {
         "sslmode": "require"
     }
-if "?" in DATABASE_URL:
+if DATABASE_URL and "?" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.split("?")[0]
 # Create engine
 engine = create_engine(
