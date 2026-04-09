@@ -45,7 +45,7 @@ jobs:
                 aws ecs describe-task-definition \ 
                     --task-definition chaindox-backend \
                     --query taskDefinition \
-                    > task-defintion.json
+                    > task-definition.json
 
             - name: Update task definition with new image
               id: task-def
