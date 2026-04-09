@@ -77,6 +77,12 @@ def invite_user(
     current_user: User = Depends(get_current_user),
 ):
     try:
+        from models import Company
+        company = db.query(Company).filter(Company.company_id == company_id).first()
+        if not company:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
+
+
         if current_user.company_id != company_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -93,8 +99,20 @@ def invite_user(
             raise ValueError("Cannot invite someone as owner. Use admin role instead.")
         
         from datetime import datetime
+        from models import Plan
+        plan =  db.query(Plan).filter(Plan.plan_id == company.plan_id).first()
         existing = db.query(User).filter(User.email == invite.email).first()
-        
+
+
+        if plan and plan.max_users is not None:
+            current_user_count = db.query(User).filter(User.company_id == company_id, User.is_active == True).count()
+
+            if current_user_count >= plan.max_users:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"User limit reached ({current_user_count}/{plan.max_users}). Upgrade your plan to invite more members."
+                )
+            
         if existing:
             if existing.company_id == company_id:
                 raise ValueError(f"{invite.email} is already a member of this company")

@@ -4,7 +4,7 @@ from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Date, Numeric, Text,
     ForeignKey, BigInteger, Index, CheckConstraint
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -438,10 +438,10 @@ class File(Base):
     
     # Document Identity
     name = Column(String(255), nullable=False)
-    document_type = Column(String(50), nullable=False)  # 'bill_of_lading', 'commercial_invoice', 'packing_list', 'certificate_of_origin', 'etr'
+    document_type = Column(String(50), nullable=False)  
     
     # TradeTrust Document Data
-    document_data = Column(JSONB, nullable=False)
+    document_data = Column(JSON, nullable=False) 
     
     # Blockchain Info (extracted from document_data)
     credential_id = Column(String(255))
@@ -683,12 +683,13 @@ class AddressBook(Base):
     company_id = Column(String(100), ForeignKey("company.company_id"), nullable=False)
     
     # Contact Info
-    contact_type = Column(String(50), nullable=False)  # 'customer', 'supplier', 'shipper', 'consignee', 'customs_agent'
+    contact_type = Column(String(50))  # 'customer', 'supplier', 'shipper', 'consignee', 'customs_agent'
     name = Column(String(255), nullable=False)
+    wallet_address = Column(String(255), nullable=False)
     company_name = Column(String(255))
     email = Column(String(255))
     phone = Column(String(20))
-    
+
     # Address
     address_line_1 = Column(String(255))
     address_line_2 = Column(String(255))
@@ -696,7 +697,7 @@ class AddressBook(Base):
     state = Column(String(100))
     postal_code = Column(String(20))
     country = Column(String(2))  # 2-letter country code
-    
+
     # Metadata
     notes = Column(Text)
     is_favorite = Column(Boolean, default=False, nullable=False)

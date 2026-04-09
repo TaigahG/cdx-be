@@ -1,1 +1,1 @@
-from . import company_crud, user_crud, shipment_crud, file_crud, folder_crud
+from . import company_crud, user_crud, shipment_crud, file_crud, folder_crud, address_book_crud

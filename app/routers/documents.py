@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List
+import json
 from database import get_db
 from schemas import FileCreate, FileUpdate, FileResponse
 from services import FileService
@@ -39,6 +41,27 @@ def list_documents(
     return FileService.list_files(
         db, company_id, shipment_id, folder_id, 
         document_type, is_verified, skip, limit
+    )
+
+@router.get("/{file_id}/download")
+def download_document(file_id: int, db: Session = Depends(get_db)):
+    """
+    Download the raw document_data as a .json file.
+    Frontend creates a blob from this for the user to download.
+    Key ordering is preserved since document_data is stored as JSON (not JSONB).
+    """
+    file = FileService.get_file(db, file_id)
+    if not file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    # Serialize with indent for readability, ensure_ascii=False for unicode
+    content = json.dumps(file.document_data, indent=2, ensure_ascii=False)
+    filename = file.name if file.name.endswith(".json") else f"{file.name}.json"
+
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 @router.get("/{file_id}", response_model=FileResponse)

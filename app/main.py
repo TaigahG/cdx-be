@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from database import engine, Base
 from redis_client import get_redis, close_redis
-from routers import companies, users, shipments, documents, auth, credits, drafts, folders, billing, stripe_webhook, plans
+from routers import companies, users, shipments, documents, auth, credits, drafts, folders, billing, stripe_webhook, plans, address_book
 import os
 
 
@@ -32,10 +32,13 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("FRONTEND_URL", "http://localhost:3000").split(",")
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,6 +55,7 @@ app.include_router(folders.router, prefix="/api/folders", tags=["Folders"])
 app.include_router(billing.router, prefix="/api/billing", tags=["Billing"])
 app.include_router(stripe_webhook.router, prefix="/api/stripe", tags=["Stripe"])
 app.include_router(plans.router, prefix="/api/plans", tags=["Plans"])
+app.include_router(address_book.router, prefix="/api/address-book", tags=["Address Book"])
 
 
 @app.get("/health")

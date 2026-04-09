@@ -459,7 +459,8 @@ class DocumentType(str, Enum):
     COMMERCIAL_INVOICE = "commercial_invoice"
     PACKING_LIST = "packing_list"
     CERTIFICATE_OF_ORIGIN = "certificate_of_origin"
-    ETR = "etr"  # Electronic Trade Receipt
+    ETR = "etr"  
+    WAREHOUSE_RECEIPT = "warehouse_receipt"
 
 class DocumentStatus(str, Enum):
     DRAFT = "draft"
@@ -623,6 +624,7 @@ class FileResponse(FileBase):
     created_at: datetime
     updated_at: datetime
     issued_at: Optional[datetime] = None
+
 
     class Config:
         from_attributes = True
@@ -794,12 +796,13 @@ class ContactType(str, Enum):
     CUSTOMS_AGENT = "customs_agent"
 
 class AddressBookBase(BaseModel):
-    contact_type: ContactType
     name: str = Field(..., max_length=255)
+    wallet_address: str = Field(..., max_length=255)
+    contact_type: Optional[ContactType] = None
     company_name: Optional[str] = Field(None, max_length=255)
     email: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
-    
+
     # Address
     address_line_1: Optional[str] = Field(None, max_length=255)
     address_line_2: Optional[str] = Field(None, max_length=255)
@@ -807,7 +810,7 @@ class AddressBookBase(BaseModel):
     state: Optional[str] = Field(None, max_length=100)
     postal_code: Optional[str] = Field(None, max_length=20)
     country: Optional[str] = Field(None, max_length=2, description="2-letter country code")
-    
+
     # Metadata
     notes: Optional[str] = None
     is_favorite: bool = Field(default=False)
@@ -817,8 +820,9 @@ class AddressBookCreate(AddressBookBase):
     created_by: str
 
 class AddressBookUpdate(BaseModel):
-    contact_type: Optional[ContactType] = None
     name: Optional[str] = None
+    wallet_address: Optional[str] = None
+    contact_type: Optional[ContactType] = None
     company_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
