@@ -42,10 +42,7 @@ jobs:
             
             - name: Download current task definition
               run: |
-                aws ecs describe-task-definition \ 
-                    --task-definition chaindox-backend \
-                    --query taskDefinition \
-                    > task-definition.json
+                aws ecs describe-task-definition --task-definition chaindox-backend --query taskDefinition > task-definition.json
 
             - name: Update task definition with new image
               id: task-def
