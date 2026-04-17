@@ -461,6 +461,10 @@ class DocumentType(str, Enum):
     CERTIFICATE_OF_ORIGIN = "certificate_of_origin"
     ETR = "etr"  
     WAREHOUSE_RECEIPT = "warehouse_receipt"
+    CARGO_INSURANCE = "cargo_insurance"
+    SEA_WAYBILL = "sea_waybill"                                                                                                                  
+    SHIPPER_LETTER_OF_INSTRUCTIONS = "shipper_letter_of_instructions"                                                                            
+    SHIPS_DELIVERY_ORDER = "ships_delivery_order"  
 
 class DocumentStatus(str, Enum):
     DRAFT = "draft"
