@@ -33,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # Run from the app/ directory so relative imports work (from database import ..., etc.)
 # Alembic runs from /project root (alembic revision, alembic upgrade head)
 WORKDIR /project/app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "4000", "--workers", "2"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "4000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips=*"]
