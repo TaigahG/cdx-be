@@ -7,7 +7,10 @@ from typing import Optional
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+# APP_URL is the primary frontend URL used for Stripe redirects (must be a single URL)
+# Falls back to the first value in FRONTEND_URL if APP_URL is not set
+_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+APP_URL = os.getenv("APP_URL", _frontend_url.split(",")[0].strip())
 
 class StripeService:
 
@@ -79,8 +82,8 @@ class StripeService:
                 "plan_id": str(plan_id) if plan_id else "",
             },
 
-            success_url=success_url or f"{FRONTEND_URL}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=cancel_url or f"{FRONTEND_URL}/billing/cancelled",
+            success_url=success_url or f"{APP_URL}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=cancel_url or f"{APP_URL}/billing/cancelled",
             allow_promotion_codes=True,
             billing_address_collection="required",
             tax_id_collection={"enabled": True},
@@ -129,8 +132,8 @@ class StripeService:
                 "type": "credit",
                 "quantity": str(quantity),
             },
-            success_url=f"{FRONTEND_URL}/credits/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{FRONTEND_URL}/credits/cancelled",
+            success_url=f"{APP_URL}/credits/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{APP_URL}/credits/cancelled",
         )
         
         return {
@@ -194,7 +197,7 @@ class StripeService:
         """
         session = stripe.billing_portal.Session.create(
             customer=stripe_customer_id,
-            return_url=return_url or f"{FRONTEND_URL}/settings/billing",
+            return_url=return_url or f"{APP_URL}/settings/billing",
         )
         
         return {

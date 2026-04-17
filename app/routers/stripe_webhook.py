@@ -4,7 +4,7 @@ from database import get_db
 from services.strive_services import StripeService
 from services.plan_service import PlanEnforcementService
 from models import Company
-from datetime import datetime
+from datetime import datetime, date
 import logging
 
 logger = logging.getLogger(__name__)
@@ -93,10 +93,20 @@ def _activate_subscription(db:Session, company: Company, session: dict):
     if subs_id:
         company.stripe_subscription_id = subs_id
 
+        # Fetch subscription from Stripe to get next billing date
+        try:
+            sub = StripeService.get_subscription(subs_id)
+            period_end = sub.get("current_period_end")
+            if period_end:
+                company.next_billing_date = date.fromtimestamp(period_end)
+        except Exception as e:
+            logger.warning(f"Could not fetch subscription details for next_billing_date: {e}")
+
     if plan_id:
         company.plan_id = int(plan_id)
 
     company.subscription_status = "active"
+    company.subscription_started = datetime.utcnow()
     company.updated_at = datetime.utcnow()
 
     db.commit()
@@ -126,22 +136,32 @@ def _add_credits(db:Session, company:Company, session:dict, metadata:dict):
 def _handle_invoice_paid(db: Session, invoice: dict):
     customer_id = invoice.get("customer")
     subscription_id = invoice.get("subscription")
-    
+
     company = db.query(Company).filter(
         Company.stripe_customer_id == customer_id
     ).first()
-    
+
     if not company:
         logger.warning(f"No company for Stripe customer: {customer_id}")
         return
-    
+
     # Ensure subscription is active
     if company.subscription_status != "active":
         company.subscription_status = "active"
-    
+
+    # Update next billing date from subscription period end
+    if subscription_id:
+        try:
+            sub = StripeService.get_subscription(subscription_id)
+            period_end = sub.get("current_period_end")
+            if period_end:
+                company.next_billing_date = date.fromtimestamp(period_end)
+        except Exception as e:
+            logger.warning(f"Could not update next_billing_date on invoice paid: {e}")
+
     company.updated_at = datetime.utcnow()
     db.commit()
-    
+
     logger.info(f"Invoice paid for {company.company_id} | Amount: {invoice.get('amount_paid')}")
  
  
