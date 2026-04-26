@@ -583,6 +583,8 @@ class FileUpdate(BaseModel):
     shipment_id: Optional[str] = None
     folder_id: Optional[int] = None
     status: Optional[DocumentStatus] = None
+    document_data: Optional[Dict[str, Any]] = None
+    file_size_bytes: Optional[int] = Field(None, ge=0)
 
 class FileVerificationUpdate(BaseModel):
     """Internal schema for updating verification status"""
