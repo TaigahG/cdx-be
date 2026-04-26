@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import json
 from database import get_db
-from schemas import FileCreate, FileUpdate, FileResponse
+from schemas import FileCreate, FileUpdate, FileResponse, DocumentStatus
 from services import FileService
 
 router = APIRouter()
@@ -85,6 +85,17 @@ def update_document(file_id: int, file_update: FileUpdate, db: Session = Depends
     """Update a document"""
     try:
         file = FileService.update_file(db, file_id, file_update)
+        if not file:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+        return file
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.patch("/{file_id}/status", response_model=FileResponse)
+def update_document_status(file_id: int, new_status: DocumentStatus, db: Session = Depends(get_db)):
+    """Update document status"""
+    try:
+        file = FileService.update_status(db, file_id, new_status)
         if not file:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
         return file

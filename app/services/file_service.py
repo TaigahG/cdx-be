@@ -75,6 +75,7 @@ class FileService:
     @staticmethod
     def create_file(db: Session, file: FileCreate) -> File:
         """Create file with validation and auto-extract blockchain fields"""
+        transferable = {"bill_of_lading"}
         if not company_crud.company_exists(db, file.company_id):
             raise ValueError(f"Company with ID {file.company_id} not found")
 
@@ -104,9 +105,18 @@ class FileService:
                     file_data[key] = value
             if extracted:
                 logger.info(f"Auto-extracted blockchain fields: {list(extracted.keys())}")
+        
+        file_data["types"] = "transferable" if file.document_type in transferable else "verifiable"
 
         return file_crud.create_file(db, file_data, document_type=file.document_type)
     
+    @staticmethod
+    def update_status(db: Session, file_id: int, new_status) -> Optional[File]:
+        """Update document status"""
+        if not file_crud.get_file(db, file_id):
+            raise ValueError(f"File with ID {file_id} not found")
+        return file_crud.update_file(db, file_id, {"status": new_status})
+
     @staticmethod
     def update_file(db: Session, file_id: int, file_update: FileUpdate) -> Optional[File]:
         """Update file with validation"""

@@ -439,6 +439,7 @@ class File(Base):
     # Document Identity
     name = Column(String(255), nullable=False)
     document_type = Column(String(50), nullable=False)  
+    types = Column(String(50), nullable=False)
     
     # TradeTrust Document Data
     document_data = Column(JSON, nullable=False) 

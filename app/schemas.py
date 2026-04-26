@@ -471,6 +471,7 @@ class DocumentStatus(str, Enum):
     ISSUED = "issued"
     TRANSFERRED = "transferred"
     REVOKED = "revoked"
+    FAILED = "failed"
 
 class VerificationType(str, Enum):
     INITIAL = "initial"
