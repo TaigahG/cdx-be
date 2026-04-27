@@ -99,24 +99,27 @@ def generate_shipment_id(
     else:
         prefix = "SHIP"
     
+    # Append shipment name as-is (uppercased, trimmed) if provided
+    name_suffix = f"_{shipment_name.strip().upper()}" if shipment_name else ""
+
     # Generate ID with random suffix
     max_attempts = 10
     for _ in range(max_attempts):
         suffix = generate_random_suffix(4)
-        shipment_id = f"{prefix}_{suffix}"
-        
+        shipment_id = f"{prefix}_{suffix}{name_suffix}"
+
         # If no DB session, return first attempt
         if db is None:
             return shipment_id
-        
+
         # Check if ID already exists
         from crud.shipment_crud import shipment_exists
         if not shipment_exists(db, shipment_id):
             return shipment_id
-    
+
     # Fallback: use longer random suffix if collision
     suffix = generate_random_suffix(6)
-    return f"{prefix}_{suffix}"
+    return f"{prefix}_{suffix}{name_suffix}"
 
 
 def generate_user_id(email: str, db: Session = None) -> str:
